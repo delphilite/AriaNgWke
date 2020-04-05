@@ -20,7 +20,7 @@ uses
 {$ELSE}
   SysUtils, Classes, Controls, graphics, Forms,
 {$ENDIF}
-  Messages, windows,Langji.Wke.lib, Langji.Wke.types;
+  Messages, windows, Langji.Wke.lib, Langji.Wke.types;
 
 type
   TCustomWkePage = class(TComponent)
@@ -40,6 +40,7 @@ type
     FOnConfirmBox: TOnConfirmBoxEvent;
     FCookieEnabled: boolean;
     FwkeCookiePath: string;
+    FLocalStorage: string;
     FwkeUserAgent: string;
     FHtmlFile: string;
     FWindowTop: Integer;
@@ -48,7 +49,9 @@ type
     FWindowWidth: Integer;
     FOnPromptBox: TOnPromptBoxEvent;
     FOnConsoleMessage: TOnConsoleMessgeEvent;
-    FisReady: boolean;
+    FHeadless, FisReady: boolean;
+    Fproxy: string;
+    FVisible: boolean;
     function GetZoom: Integer;
     procedure SetZoom(const Value: Integer);
 
@@ -57,13 +60,11 @@ type
     procedure DoWebViewUrlChange(Sender: TObject; sUrl: string);
     procedure DoWebViewLoadStart(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; var Cancel: boolean);
     procedure DoWebViewLoadEnd(Sender: TObject; sUrl: string; loadresult: wkeLoadingResult);
-    procedure DoWebViewCreateView(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; windowFeatures:
-      PwkeWindowFeatures; var wvw: Pointer);
+    procedure DoWebViewCreateView(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; windowFeatures: PwkeWindowFeatures; var wvw: Pointer);
     procedure DoWebViewAlertBox(Sender: TObject; smsg: string);
     function DoWebViewConfirmBox(Sender: TObject; smsg: string): boolean;
     function DoWebViewPromptBox(Sender: TObject; smsg, defaultres, Strres: string): boolean;
-    procedure DoWebViewConsoleMessage(Sender: TObject; const AMessage, sourceName: string; sourceLine: Cardinal; const
-      stackTrack: string);
+    procedure DoWebViewConsoleMessage(Sender: TObject; const AMessage, sourceName: string; sourceLine: Cardinal; const stackTrack: string);
     procedure DoWebViewDocumentReady(Sender: TObject);
     procedure DoWebViewWindowClosing(Sender: TObject);
     procedure DoWebViewWindowDestroy(Sender: TObject);
@@ -80,6 +81,9 @@ type
     procedure SetHeadless(const Value: boolean);
     function GetCookie: string;
     procedure SetCookie(const Value: string);
+    procedure setProxy(const Value: string);
+    procedure setUserAgent(const Value: string);
+    procedure SetLocaStoragePath(const Value: string);
     { Private declarations }
 
   public
@@ -97,9 +101,11 @@ type
     procedure LoadUrl(const Aurl: string);
     procedure LoadHtml(const Astr: string);
     procedure LoadFile(const AFile: string);
+    procedure LoadCookies(const cks, Aurl: string);
     procedure SetFocusToWebbrowser;
     function ExecuteJavascript(const js: string): boolean;
     function GetSource(const delay: Integer = 200): string;
+
 
     /// <summary>
     /// 执行js并得到string返回值
@@ -112,21 +118,24 @@ type
     property LoadFinished: boolean read GetLoadFinished; // 加载完成
     property Transparent: boolean read GetTransparent write SetTransparent;
     property Mainwkeview: TwkeWebView read thewebview;
+    property Cookie: string read GetCookie write SetCookie;
+    property ZoomPercent: Integer read GetZoom write SetZoom;
   published
     property Caption: string write SetCaption;
     property WindowLeft: Integer read FWindowLeft write FWindowLeft;
     property WindowTop: Integer read FWindowTop write FWindowTop;
     property WindowWidth: Integer read FWindowWidth write FWindowWidth;
     property WindowHeight: Integer read FWindowHeight write FWindowHeight;
-    property UserAgent: string read FwkeUserAgent write FwkeUserAgent;
+    property UserAgent: string read FwkeUserAgent write setUserAgent;
     property HtmlFile: string read FHtmlFile write FHtmlFile;
     property WindowHandle: Hwnd read GetWebHandle;
     property isReady: boolean read FisReady write FisReady;
-    property Headless: boolean write SetHeadless;
+    property Headless: boolean read FHeadless write SetHeadless;
+    property webVisible: boolean read FVisible write FVisible;
+    property Proxy: string read Fproxy write setProxy;
     property CookieEnabled: boolean read FCookieEnabled write FCookieEnabled default true;
     property CookiePath: string read FwkeCookiePath write FwkeCookiePath;
-    property Cookie: string read GetCookie write SetCookie;
-    property ZoomPercent: Integer read GetZoom write SetZoom;
+    property LocalStoragePath: string write SetLocaStoragePath;
     property OnTitleChange: TOnTitleChangeEvent read FOnTitleChange write FOnTitleChange;
     property OnUrlChange: TOnUrlChangeEvent read FOnUrlChange write FOnUrlChange;
     property OnBeforeLoad: TOnBeforeLoadEvent read FOnLoadStart write FOnLoadStart;
@@ -147,20 +156,20 @@ type
   end;
 
   TWkePopupPage = class(TCustomWkePage)
-  private
-    FVisible, FHeadLess: boolean;
   protected
-
     procedure CreateWebView; override;
   end;
 
   TWkeGetSource = class
   private
     Fwke: TWkePopupPage;
+    Fproxy: string;
+    FwkeUserAgent: string;
     function GetSourceHtml: string;
     function GetSourceText: string;
-
     function getReady: boolean;
+    procedure setProxy(const Value: string);
+    procedure setUserAgent(const Value: string);
   public
     constructor Create();
     destructor Destroy; override;
@@ -168,6 +177,8 @@ type
     procedure LoadUrl(const Aurl: string);
     property SourceHtml: string read GetSourceHtml;
     property SourceText: string read GetSourceText;
+    property Proxy: string read Fproxy write setProxy;
+    property UserAgent: string read FwkeUserAgent write setUserAgent;
     property isReady: boolean read getReady;
   end;
 
@@ -189,7 +200,7 @@ var
 implementation
 
 uses
-  math;
+  System.StrUtils, math;
 
 procedure doDucumentReadyCallback(webView: wkeWebView; param: Pointer; frameid: wkeFrameHwnd); cdecl;
 begin
@@ -207,8 +218,7 @@ begin
   TCustomWkePage(param).DoWebViewUrlChange(TCustomWkePage(param), WkeStringtoString(url));
 end;
 
-procedure DoLoadEnd(webView: wkeWebView; param: Pointer; url: wkeString; result: wkeLoadingResult; failedReason:
-  wkeString); cdecl;
+procedure DoLoadEnd(webView: wkeWebView; param: Pointer; url: wkeString; result: wkeLoadingResult; failedReason: wkeString); cdecl;
 begin
   TCustomWkePage(param).DoWebViewLoadEnd(TCustomWkePage(param), WkeStringtoString(url), result);
 end;
@@ -222,8 +232,7 @@ begin
   result := not Cancel;
 end;
 
-function DoCreateView(webView: wkeWebView; param: Pointer; navigationType: wkeNavigationType; url: wkeString;
-  windowFeatures: PwkeWindowFeatures): wkeWebView; cdecl;
+function DoCreateView(webView: wkeWebView; param: Pointer; navigationType: wkeNavigationType; url: wkeString; windowFeatures: PwkeWindowFeatures): wkeWebView; cdecl;
 var
   pt: Pointer;
 begin
@@ -246,18 +255,14 @@ begin
   result := TCustomWkePage(param).DoWebViewConfirmBox(TCustomWkePage(param), WkeStringtoString(msg));
 end;
 
-function DoPromptBox(webView: wkeWebView; param: Pointer; msg: wkeString; defaultResult: wkeString; sresult: wkeString):
-  boolean; cdecl;
+function DoPromptBox(webView: wkeWebView; param: Pointer; msg: wkeString; defaultResult: wkeString; sresult: wkeString): boolean; cdecl;
 begin
-  result := TCustomWkePage(param).DoWebViewPromptBox(TCustomWkePage(param), WkeStringtoString(msg), WkeStringtoString(defaultResult),
-    WkeStringtoString(sresult));
+  result := TCustomWkePage(param).DoWebViewPromptBox(TCustomWkePage(param), WkeStringtoString(msg), WkeStringtoString(defaultResult), WkeStringtoString(sresult));
 end;
 
-procedure DoConsoleMessage(webView: wkeWebView; param: Pointer; level: wkeMessageLevel; const AMessage, sourceName:
-  wkeString; sourceLine: Cardinal; const stackTrack: wkeString); cdecl;
+procedure DoConsoleMessage(webView: wkeWebView; param: Pointer; level: wkeMessageLevel; const AMessage, sourceName: wkeString; sourceLine: Cardinal; const stackTrack: wkeString); cdecl;
 begin
-  TCustomWkePage(param).DoWebViewConsoleMessage(TCustomWkePage(param), WkeStringtoString(AMessage), WkeStringtoString(sourceName),
-    sourceLine, WkeStringtoString(stackTrack));
+  TCustomWkePage(param).DoWebViewConsoleMessage(TCustomWkePage(param), WkeStringtoString(AMessage), WkeStringtoString(sourceName), sourceLine, WkeStringtoString(stackTrack));
 end;
 
 procedure DoDocumentReady(webView: wkeWebView; param: Pointer); cdecl;
@@ -277,7 +282,7 @@ end;
 
 function DoGetSource(p1, p2, es: jsExecState): jsValue;
 begin
-  tmpSource :=Utf8ToAnsi( jsToTempString(es, jsArg(es, 0)));
+  tmpSource := Utf8ToAnsi(jsToTempString(es, jsArg(es, 0)));
   result := 0;
 end;
 
@@ -292,8 +297,10 @@ begin
   FWindowTop := 10;
   FWindowWidth := 640;
   FWindowHeight := 480;
-  FwkeUserAgent :=
-    'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36 Langji.Wke 1.2';
+  FLocalStorage := '';
+  FwkeCookiePath := '';
+  FVisible:=true;
+  FwkeUserAgent := 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36 Langji.Wke 1.2';
 end;
 
 destructor TCustomWkePage.Destroy;
@@ -306,12 +313,11 @@ begin
   inherited;
 end;
 
-
-
 procedure TCustomWkePage.ShowWebPage;
 begin
   if not IsWindow(wkeGetWindowHandle(thewebview)) then
     CreateWebView;
+  if FVisible  then
   ShowWindow(wkeGetWindowHandle(thewebview), SW_NORMAL);
   if FileExists(FHtmlFile) then
 {$IFDEF UNICODE}
@@ -343,15 +349,13 @@ begin
     FOnConfirmBox(Self, smsg, result);
 end;
 
-procedure TCustomWkePage.DoWebViewConsoleMessage(Sender: TObject; const AMessage, sourceName: string; sourceLine:
-  Cardinal; const stackTrack: string);
+procedure TCustomWkePage.DoWebViewConsoleMessage(Sender: TObject; const AMessage, sourceName: string; sourceLine: Cardinal; const stackTrack: string);
 begin
   if Assigned(FOnConsoleMessage) then
     FOnConsoleMessage(Self, AMessage, sourceName, sourceLine);
 end;
 
-procedure TCustomWkePage.DoWebViewCreateView(Sender: TObject; sUrl: string; navigationType: wkeNavigationType;
-  windowFeatures: PwkeWindowFeatures; var wvw: Pointer);
+procedure TCustomWkePage.DoWebViewCreateView(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; windowFeatures: PwkeWindowFeatures; var wvw: Pointer);
 var
   newvw: TwkeWebView;
 begin
@@ -375,8 +379,7 @@ begin
   FLoadFinished := true;
 end;
 
-procedure TCustomWkePage.DoWebViewLoadStart(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; var Cancel:
-  boolean);
+procedure TCustomWkePage.DoWebViewLoadStart(Sender: TObject; sUrl: string; navigationType: wkeNavigationType; var Cancel: boolean);
 begin
   FisReady := false;
   if Assigned(FOnLoadStart) then
@@ -449,7 +452,7 @@ end;
 function TCustomWkePage.GetCookie: string;
 begin
   if Assigned(thewebview) then
-    result :=Utf8ToAnsi( wkeGetCookie(thewebview));
+    result := Utf8ToAnsi(wkeGetCookie(thewebview));
 end;
 
 function TCustomWkePage.GetCookieEnable: boolean;
@@ -484,7 +487,7 @@ begin
     {$IFDEF UNICODE}
     result := wkeGetTitleW(thewebview);
     {$ELSE}
-    result := Utf8ToAnsi(wkeGetTitle(thewebview));
+  result := Utf8ToAnsi(wkeGetTitle(thewebview));
     {$ENDIF}
 end;
 
@@ -525,11 +528,23 @@ begin
     wkeSetTransparent(thewebview, Value);
 end;
 
+procedure TCustomWkePage.setUserAgent(const Value: string);
+begin
+  FwkeUserAgent := Value;
+  if Assigned(thewebview) then
+  begin
+    {$IFDEF UNICODE}
+    wkeSetUserAgentW(thewebview, PChar(Value));
+    {$ELSE}
+    wkeSetUserAgent(thewebview, PansiChar(AnsiString(Value)));
+    {$ENDIF}
+  end;
+end;
+
 function TCustomWkePage.GetZoom: Integer;
 begin
   if Assigned(thewebview) then
-    result := Trunc(wkeGetZoomFactor(thewebview))
-    // Trunc(power(1.2, thewebview.ZoomFactor) * 100)
+    result := Trunc(wkeGetZoomFactor(thewebview))    // Trunc(power(1.2, thewebview.ZoomFactor) * 100)
   else
     result := 100;
 end;
@@ -550,6 +565,29 @@ procedure TCustomWkePage.HidePage;
 begin
   if Assigned(thewebview) then
     ShowWindow(GetWebHandle, SW_HIDE);
+end;
+
+procedure TCustomWkePage.LoadCookies(const cks, Aurl: string);
+var
+  i: Integer;
+begin
+  if Assigned(thewebview) then
+  begin
+    with TStringList.Create do
+    begin
+      try
+        Delimiter := ';';
+        DelimitedText := cks;
+        for i := 0 to Count - 1 do
+        begin
+          wkeSetCookie(thewebview, PAnsiChar(AnsiToUtf8(Aurl)), PAnsiChar(AnsiToUtf8(Strings[i])));
+        end;
+      finally
+        Free;
+      end;
+    end;
+  end;
+
 end;
 
 procedure TCustomWkePage.LoadFile(const AFile: string);
@@ -612,8 +650,31 @@ end;
 
 procedure TCustomWkePage.SetHeadless(const Value: boolean);
 begin
+  FHeadless := Value;
   if Assigned(thewebview) then
     wkeSetHeadlessEnabled(thewebview, Value);
+end;
+
+procedure TCustomWkePage.SetLocaStoragePath(const Value: string);
+begin
+  if Value <> FLocalStorage then
+    FLocalStorage := Value;
+end;
+
+procedure TCustomWkePage.setProxy(const Value: string);
+var
+  aproxy: TwkeProxy;
+  ahost: string;
+  aport: Integer;
+begin
+  Fproxy := Value;
+  ahost := leftstr(Fproxy, Pos(':', Fproxy) - 1);
+  aport := strtointdef(Fproxy, Length(Fproxy) - Pos(':', Fproxy));
+  aproxy.AType := WKE_PROXY_HTTP;
+  StrPcopy(aproxy.hostname, AnsiString(ahost));
+  aproxy.port := aport;
+
+  wkeSetproxy(@Value);
 end;
 
 procedure TCustomWkePage.SetZoom(const Value: Integer);
@@ -668,7 +729,8 @@ begin
     wkeSetNavigationToNewWindowEnable(thewebview, false);
     if DirectoryExists(FwkeCookiePath) and Assigned(wkeSetCookieJarPath) then
       wkeSetCookieJarPath(thewebview, PwideChar(FwkeCookiePath));
-
+    if DirectoryExists(FLocalStorage) and Assigned(wkeSetLocalStorageFullPath) then
+      wkeSetLocalStorageFullPath(thewebview, PwideChar(FLocalStorage));
     wkeSetCspCheckEnable(thewebview, false); // 关闭跨域检查
     jsBindFunction('GetSource', DoGetSource, 1);
   end;
@@ -682,10 +744,10 @@ begin
   thewebview := wkeCreateWebWindow(WKE_WINDOW_TYPE_POPUP, 0, FWindowLeft, FWindowTop, FWindowWidth, FWindowHeight);
   if Assigned(thewebview) then
   begin
-    if not FVisible then
-      ShowWindow(GetWebHandle, SW_HIDE)
-    else
-      ShowWindow(GetWebHandle, SW_NORMAL);
+//    if not FVisible then
+//      ShowWindow(GetWebHandle, SW_HIDE)
+//    else
+//      ShowWindow(GetWebHandle, SW_NORMAL);
 
     wkeOnTitleChanged(thewebview, DoTitleChange, Self);
     wkeOnURLChanged(thewebview, DoUrlChange, Self);
@@ -718,7 +780,9 @@ begin
     wkeSetNavigationToNewWindowEnable(thewebview, false);
     if DirectoryExists(FwkeCookiePath) and Assigned(wkeSetCookieJarPath) then
       wkeSetCookieJarPath(thewebview, PwideChar(FwkeCookiePath));
-    wkeSetHeadlessEnabled(thewebview,FHeadLess );
+    if DirectoryExists(FLocalStorage) and Assigned(wkeSetLocalStorageFullPath) then
+      wkeSetLocalStorageFullPath(thewebview, PwideChar(FLocalStorage));
+    wkeSetHeadlessEnabled(thewebview, FHeadLess);
     wkeSetCspCheckEnable(thewebview, false); // 关闭跨域检查
     jsBindFunction('GetSource', DoGetSource, 1);
   end;
@@ -733,8 +797,7 @@ begin
   Fwke.WindowTop := 0; // -480;
   Fwke.WindowWidth := 600;
   Fwke.WindowHeight := 480;
-  Fwke.UserAgent :=
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3747.0 Safari/537.36';
+  Fwke.UserAgent := 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3747.0 Safari/537.36';
     // Fwke.OnAlertBox :=DoAlertBox;
     // 设置
     // FHeadless := false;
@@ -745,8 +808,6 @@ begin
   Fwke.Free;
   inherited;
 end;
-
-
 
 function TWkeGetSource.getReady: boolean;
 begin
@@ -772,6 +833,22 @@ begin
     Sleep(100);
     Application.ProcessMessages;
   until not Fwke.LoadFinished;
+end;
+
+procedure TWkeGetSource.setProxy(const Value: string);
+var
+  aproxy: TwkeProxy;
+  ahost: string;
+  aport: Integer;
+begin
+  Fproxy := Value;
+  Fwke.Proxy := Value;
+end;
+
+procedure TWkeGetSource.setUserAgent(const Value: string);
+begin
+  FwkeUserAgent := Value;
+  Fwke.UserAgent := Value;
 end;
 
 procedure TWkeGetSource.ShowWebPage(const bVisible, bHeadLess: boolean);

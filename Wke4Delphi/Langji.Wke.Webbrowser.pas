@@ -925,7 +925,7 @@ begin
     if Assigned(thewebview) then
     begin
       wkeSetLocalStorageFullPath(thewebview, PwideChar(Value));
-      FLocalStorage := Value;
+
     end;
   end;
 
@@ -1057,7 +1057,7 @@ destructor TWkeApp.Destroy;
 begin
   FWkeWebPages.Clear;
   FWkeWebPages.Free;
-  WkeFinalizeAndUnloadLib;
+ // WkeFinalizeAndUnloadLib;
   inherited;
 end;
 
