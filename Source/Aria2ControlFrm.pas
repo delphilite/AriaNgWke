@@ -98,6 +98,7 @@ begin
     ExtractWebIndexFile(F);
   if FileExists(F) then
     FWebBrowser.LoadFile(F);
+  FWebBrowser.ZoomFactor := Screen.PixelsPerInch / 96;
 end;
 
 procedure TAria2ControlForm.WkeWebBrowser1TitleChange(Sender: TObject; sTitle: string);

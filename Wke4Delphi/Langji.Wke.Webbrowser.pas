@@ -46,7 +46,6 @@ type
     FLocalUrl, FLocalTitle: string; // 当前Url Title
     FpopupEnabled: boolean; // 允许弹窗
     FCookieEnabled: boolean;
-    FZoomValue: Integer;
     FLoadFinished: boolean; // 加载完
     FIsmain: boolean;
     FPlatform: TwkePlatform;
@@ -73,8 +72,9 @@ type
     FOnLoadUrlEnd: TOnLoadUrlEndEvent;
     FOnLoadUrlBegin: TOnLoadUrlBeginEvent;
     FOnmbBindFunction: TOnmbJsBindFunction;
-    function GetZoom: Integer;
-    procedure SetZoom(const Value: Integer);
+
+    function GetZoomFactor: Double;
+    procedure SetZoomFactor(const Value: Double);
 
     // webview
     procedure DoWebViewTitleChange(Sender: TObject; const sTitle: string);
@@ -193,7 +193,7 @@ type
     property isMain: boolean read FIsmain;
     property IsDocumentReady: boolean read getDocumentReady;
     property Proxy: TwkeProxy write SetProxy;
-    property ZoomPercent: Integer read GetZoom write SetZoom;
+    property ZoomFactor: Double read GetZoomFactor write SetZoomFactor;
     property Headless: boolean write SetHeadless;
     property TouchEnabled: boolean write SetTouchEnabled;
     property DragEnabled: boolean write SetDragEnabled;
@@ -402,7 +402,6 @@ constructor TWkeWebBrowser.Create(AOwner: TComponent);
 begin
   inherited;
   Color := clwhite;
-  FZoomValue := 100;
   FCookieEnabled := true;
   FpopupEnabled := true;
   FUserAgent :=
@@ -793,15 +792,14 @@ begin
     wkeSetCookieJarPath(thewebview, PwideChar(Value));
 end;
 
-function TWkeWebBrowser.GetZoom: Integer;
+function TWkeWebBrowser.GetZoomFactor: Double;
 begin
   if Assigned(thewebview) then
   begin
-   // result := Trunc(power(1.2, thewebview.ZoomFactor) * 100)
-    result := Trunc(wkeGetZoomFactor(thewebview));
+    result := wkeGetZoomFactor(thewebview);
   end
   else
-    result := 100;
+    result := 1;
 end;
 
 procedure TWkeWebBrowser.GoBack;
@@ -979,11 +977,10 @@ begin
   end;
 end;
 
-procedure TWkeWebBrowser.SetZoom(const Value: Integer);
+procedure TWkeWebBrowser.SetZoomFactor(const Value: Double);
 begin
   if Assigned(thewebview) then
   begin
-   // thewebview.ZoomFactor := LogN(1.2, Value / 100);
     wkeSetZoomFactor(thewebview, Value);
   end;
 end;
