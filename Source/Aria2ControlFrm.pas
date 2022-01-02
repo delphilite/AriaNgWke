@@ -6,7 +6,7 @@
 {   备注：                                                                }
 {   审核：                                                                }
 {                                                                         }
-{   Copyright (c) 1998-2019 Super Studio                                  }
+{   Copyright (c) 1998-2022 Super Studio                                  }
 {                                                                         }
 { *********************************************************************** }
 
@@ -15,13 +15,15 @@ unit Aria2ControlFrm;
 interface
 
 uses
-  System.SysUtils, Vcl.Forms, Langji.Wke.Webbrowser;
+  System.SysUtils, Vcl.Forms, Langji.Wke.Webbrowser, Win11Forms, Aria2LocalStorage;
 
 type
   TAria2ControlForm = class(TForm)
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
   private
+    FLocalStorage: TAria2LocalStorage;
     FWebBrowser: TWkeWebBrowser;
   private
     procedure ExtractWebIndexFile(const AFile: string);
@@ -39,6 +41,9 @@ implementation
 
 uses
   System.Classes, System.Types, Vcl.Controls, Langji.Wke.Lib;
+
+const
+  defOptDarkMode        = 'dark';
 
 { TAria2ControlForm }
 
@@ -65,6 +70,7 @@ end;
 procedure TAria2ControlForm.FormCreate(Sender: TObject);
 const
   defLocalStoragePathFmt    = '%s\LocalStorage';
+  defLocalStorageFileFmt    = '%s\file.localstorage';
 var
   S: string;
 begin
@@ -85,6 +91,18 @@ begin
   FWebBrowser.LocalStoragePath := S;
 
   FWebBrowser.OnTitleChange := WkeWebBrowser1TitleChange;
+
+  S := Format(defLocalStorageFileFmt, [S]);
+  FLocalStorage := TAria2LocalStorage.Create(S);
+
+  Self.RoundedCorners := rcOff;
+  S := FLocalStorage.GetOptions('theme');
+  Self.TitleDarkMode := S = defOptDarkMode;
+end;
+
+procedure TAria2ControlForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FLocalStorage);
 end;
 
 procedure TAria2ControlForm.FormShow(Sender: TObject);

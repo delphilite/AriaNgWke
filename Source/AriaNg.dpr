@@ -6,7 +6,7 @@
 {   ±¸×¢£º                                                                }
 {   ÉóºË£º                                                                }
 {                                                                         }
-{   Copyright (c) 1998-2019 Super Studio                                  }
+{   Copyright (c) 1998-2022 Super Studio                                  }
 {                                                                         }
 { *********************************************************************** }
 
@@ -25,11 +25,16 @@ uses
   Winapi.Windows,
   Vcl.Forms,
 
+  JsonDataObjects in '..\Common\JsonDataObjects.pas',
+  Win11Forms in '..\Common\Win11Forms.pas',
+
+  Aria2LocalStorage in 'Aria2LocalStorage.pas',
   Aria2ControlFrm in 'Aria2ControlFrm.pas' {Aria2ControlForm};
 
 {$R *.res}
 
 {$SETPEFLAGS IMAGE_FILE_LARGE_ADDRESS_AWARE or IMAGE_FILE_RELOCS_STRIPPED}
+{$SETPEOPTFLAGS $140}
 
 begin
   Application.Title := 'AriaNg';
