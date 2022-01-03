@@ -30,6 +30,9 @@ type
     constructor Create(const AFileName: string);
     destructor Destroy; override;
 
+    class function LoadDataFromFile(const AFileName: string; AEncoding: TEncoding;
+      ABufferSize: Integer): string;
+
     function  GetOptions(const AName: string): string;
 
     property  FileName: string
@@ -72,12 +75,7 @@ begin
   OutputDebugMessage('%s.ExtractConfigData', [ClassName]);
 {$ENDIF}
   Result := False;
-  with TStreamReader.Create(AFileName, TEncoding.UTF8, True) do
-  try
-    S := ReadToEnd;
-  finally
-    Free;
-  end;
+  S := LoadDataFromFile(AFileName, TEncoding.UTF8, 64 * 1024);
   M := ATag + defWkeStorageOpenTag;
   P1 := Pos(M, S);
   if P1 = 0 then
@@ -126,6 +124,30 @@ begin
         Result := V;
   except
     ;
+  end;
+end;
+
+class function TAria2LocalStorage.LoadDataFromFile(const AFileName: string; AEncoding: TEncoding;
+  ABufferSize: Integer): string;
+var
+  FS: TStream;
+  SR: TTextReader;
+begin
+{$IFDEF DEBUGMESSAGE}
+  OutputDebugMessage('%s.LoadDataFromFile', [ClassName]);
+{$ENDIF}
+  Result := '';
+  FS := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    SR := TStreamReader.Create(FS, AEncoding, False, ABufferSize);
+    with SR do
+    try
+      Result := ReadToEnd;
+    finally
+      Free;
+    end;
+  finally
+    FS.Free;
   end;
 end;
 

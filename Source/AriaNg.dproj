@@ -28,10 +28,10 @@
 			<VerInfo_Build>3</VerInfo_Build>
 			<VerInfo_Release>2</VerInfo_Release>
 			<VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-			<VerInfo_MajorVer>2021</VerInfo_MajorVer>
+			<VerInfo_MajorVer>2022</VerInfo_MajorVer>
 			<Icon_MainIcon>AriaNg.ico</Icon_MainIcon>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<VerInfo_Keys>CompanyName=Super Studio;FileDescription=AriaNg;FileVersion=2021.1.2.3;InternalName=AriaNg;LegalCopyright=;LegalTrademarks=;OriginalFilename=AriaNg;ProductName=AriaNg;ProductVersion=2021.1.2;Comments=AriaNg, a modern web frontend making aria2 easier to use.</VerInfo_Keys>
+			<VerInfo_Keys>CompanyName=Super Studio;FileDescription=AriaNg;FileVersion=2022.1.2.3;InternalName=AriaNg;LegalCopyright=;LegalTrademarks=;OriginalFilename=AriaNg;ProductName=AriaNg;ProductVersion=2021.1.2;Comments=AriaNg, a modern web frontend making aria2 easier to use.</VerInfo_Keys>
 			<Manifest_File>AriaNg.manifest</Manifest_File>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
 			<DCC_UnitSearchPath>..\Wke4Delphi;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
@@ -59,8 +59,10 @@
 			<DelphiCompile Include="$(MainSource)">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
+			<DCCReference Include="..\Common\HookUtils.pas"/>
 			<DCCReference Include="..\Common\JsonDataObjects.pas"/>
 			<DCCReference Include="..\Common\Win11Forms.pas"/>
+			<DCCReference Include="Aria2FileMonitor.pas"/>
 			<DCCReference Include="Aria2LocalStorage.pas"/>
 			<DCCReference Include="Aria2ControlFrm.pas">
 				<Form>Aria2ControlForm</Form>

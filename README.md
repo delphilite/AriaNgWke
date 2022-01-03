@@ -16,7 +16,7 @@ Please visit [https://github.com/mayswind/AriaNg](https://github.com/mayswind/Ar
 #### Windows + Light theme
 ![AriaNgWke](https://raw.githubusercontent.com/delphilite/AriaNgWke/master/Doc/Light.png)
 
-#### Windows + Dark theme
+#### Windows + Dark theme (Title bar need Windows 1903 and newer)
 ![AriaNgWke](https://raw.githubusercontent.com/delphilite/AriaNgWke/master/Doc/Dark.png)
 
 ## Installation
