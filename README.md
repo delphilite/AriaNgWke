@@ -13,8 +13,11 @@ AriaNgWke is a smaller aria2 desktop frontend built by [miniblink](https://githu
 Please visit [https://github.com/mayswind/AriaNg](https://github.com/mayswind/AriaNg) for more information.
 
 ## Screenshots
-#### Windows
-![AriaNg Native](https://raw.githubusercontent.com/mayswind/AriaNg-WebSite/master/screenshots/ariang_native_windows.png)
+#### Windows + Light theme
+![AriaNgWke](https://raw.githubusercontent.com/delphilite/AriaNgWke/master/Doc/Light.png)
+
+#### Windows + Dark theme
+![AriaNgWke](https://raw.githubusercontent.com/delphilite/AriaNgWke/master/Doc/Dark.png)
 
 ## Installation
 #### Prebuilt release
