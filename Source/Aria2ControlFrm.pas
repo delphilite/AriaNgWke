@@ -56,7 +56,7 @@ uses
 const
   defAriaNgFileOpenTag  = 'buildVersion:"v';
   defAriaNgFileCloseTag = '"';
-  defAriaNgFileBuild    = '1.2.3';
+  defAriaNgFileBuild    = '1.2.5';
 
   defAriaNgDarkMode     = 'dark';
 
