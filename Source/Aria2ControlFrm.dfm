@@ -2,8 +2,8 @@ object Aria2ControlForm: TAria2ControlForm
   Left = 0
   Top = 0
   Caption = 'AriaNg'
-  ClientHeight = 561
-  ClientWidth = 974
+  ClientHeight = 770
+  ClientWidth = 990
   Color = clWhite
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText

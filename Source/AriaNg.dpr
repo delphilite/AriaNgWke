@@ -6,7 +6,7 @@
 {   ±¸×¢£º                                                                }
 {   ÉóºË£º                                                                }
 {                                                                         }
-{   Copyright (c) 1998-2022 Super Studio                                  }
+{   Copyright (c) 1998-2023 Super Studio                                  }
 {                                                                         }
 { *********************************************************************** }
 
@@ -25,12 +25,8 @@ uses
   Winapi.Windows,
   Vcl.Forms,
 
-  HookUtils in '..\Common\HookUtils.pas',
   JsonDataObjects in '..\Common\JsonDataObjects.pas',
   Win11Forms in '..\Common\Win11Forms.pas',
-
-  Aria2FileMonitor in 'Aria2FileMonitor.pas',
-  Aria2LocalStorage in 'Aria2LocalStorage.pas',
 
   Aria2ControlFrm in 'Aria2ControlFrm.pas' {Aria2ControlForm};
 
