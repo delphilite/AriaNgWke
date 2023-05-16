@@ -15,21 +15,19 @@ unit Aria2ControlFrm;
 interface
 
 uses
-  System.SysUtils, Vcl.Forms, Langji.Wke.Types, Langji.Wke.Webbrowser, Win11Forms;
+  System.SysUtils, System.Classes, Vcl.Forms, Langji.Wke.Types, Langji.Wke.Webbrowser, Win11Forms;
 
 type
   TAria2ControlForm = class(TForm)
     procedure FormCreate(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
   private
     FLastTheme: string;
     FWebBrowser: TWkeWebBrowser;
   private
+    function  CheckAriaNgFileBuild(const AFileName: string): Boolean;
     function  CompareVersion(const AVer1, AVer2: string): Integer;
-    function  CheckAriaNgFileBuild(const AFile: string): Boolean;
-    function  LoadDataFromFile(const AFileName: string; AEncoding: TEncoding;
-      ABufferSize: Integer): string;
+    function  LoadAriaNgBuildFromStream(AStream: TStream): string;
     procedure ExtractAriaNgFile(const AFile: string);
     procedure ParseOptionEvent(const AEvent: string);
   private
@@ -47,13 +45,9 @@ implementation
 {$R *.res} { index.html }
 
 uses
-  System.Classes, System.StrUtils, Winapi.Windows, Vcl.Controls, JsonDataObjects, Langji.Wke.Lib;
+  System.StrUtils, Winapi.Windows, Vcl.Controls, JsonDataObjects, Langji.Wke.Lib;
 
 const
-  defAriaNgFileOpenTag  = 'buildVersion:"v';
-  defAriaNgFileCloseTag = '"';
-  defAriaNgFileBuild    = '1.3.5';
-
   defAriaNgDarkMode     = 'dark';
 
   defLocalFilePathFmt   = '%s\%s';
@@ -64,22 +58,27 @@ const
 
 { TAria2ControlForm }
 
-function TAria2ControlForm.CheckAriaNgFileBuild(const AFile: string): Boolean;
+function TAria2ControlForm.CheckAriaNgFileBuild(const AFileName: string): Boolean;
 var
-  P1, P2: Integer;
-  S: string;
+  FS, RS: TStream;
+  FV, RV: string;
 begin
   Result := False;
-  S := LoadDataFromFile(AFile, TEncoding.UTF8, 512 * 1024);
-  P1 := Pos(defAriaNgFileOpenTag, S);
-  if P1 = 0 then
+  if not FileExists(AFileName) then
     Exit;
-  Inc(P1, Length(defAriaNgFileOpenTag));
-  P2 := PosEx(defAriaNgFileCloseTag, S, P1);
-  if P2 = 0 then
-    Exit;
-  S := Copy(S, P1, P2 - P1);
-  Result := CompareVersion(S, defAriaNgFileBuild) >= 0;
+  FS := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
+  try
+    RS := TResourceStream.Create(HInstance, 'INDEX', RT_RCDATA);
+    try
+      FV := LoadAriaNgBuildFromStream(FS);
+      RV := LoadAriaNgBuildFromStream(RS);
+      Result := CompareVersion(FV, RV) >= 0;
+    finally
+      RS.Free;
+    end;
+  finally
+    FS.Free;
+  end;
 end;
 
 function TAria2ControlForm.CompareVersion(const AVer1, AVer2: string): Integer;
@@ -173,11 +172,6 @@ begin
   Self.RoundedCorners := rcOff;
 end;
 
-procedure TAria2ControlForm.FormDestroy(Sender: TObject);
-begin
-  ;
-end;
-
 procedure TAria2ControlForm.FormShow(Sender: TObject);
 var
   F: string;
@@ -192,25 +186,44 @@ begin
   FWebBrowser.ZoomFactor := Screen.PixelsPerInch / 96;
 end;
 
-function TAria2ControlForm.LoadDataFromFile(const AFileName: string; AEncoding: TEncoding;
-  ABufferSize: Integer): string;
-var
-  FS: TStream;
-  SR: TTextReader;
-begin
-  Result := '';
-  FS := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
-  try
-    SR := TStreamReader.Create(FS, AEncoding, False, ABufferSize);
+function TAria2ControlForm.LoadAriaNgBuildFromStream(AStream: TStream): string;
+
+  function ExtractAriaNgBuild(const AData: string): string;
+  const
+    defAriaNgFileOpenTag  = 'buildVersion:"v';
+    defAriaNgFileCloseTag = '"';
+  var
+    P1, P2: Integer;
+  begin
+    P1 := Pos(defAriaNgFileOpenTag, AData);
+    if P1 = 0 then
+      Exit;
+    Inc(P1, Length(defAriaNgFileOpenTag));
+    P2 := PosEx(defAriaNgFileCloseTag, AData, P1);
+    if P2 = 0 then
+      Exit;
+    Result := Copy(AData, P1, P2 - P1);
+  end;
+
+  function ExtractAriaNgPartData(AStream: TStream): string;
+  var
+    SR: TTextReader;
+  begin
+    Result := '';
+    SR := TStreamReader.Create(AStream, TEncoding.UTF8, False, 512 * 1024);
     with SR do
     try
       Result := ReadToEnd;
     finally
       Free;
     end;
-  finally
-    FS.Free;
   end;
+var
+  S: string;
+begin
+  Assert(AStream <> nil);
+  S := ExtractAriaNgPartData(AStream);
+  Result := ExtractAriaNgBuild(S);
 end;
 
 procedure TAria2ControlForm.ParseOptionEvent(const AEvent: string);
