@@ -198,8 +198,9 @@ begin
   FWebBrowser.OnAlertBox := WebBrowserAlertBox;
   FWebBrowser.OnLoadEnd := WebBrowserLoadEnd;
   FWebBrowser.OnTitleChange := WebBrowserTitleChange;
-
+{
   Self.RoundedCorners := rcOff;
+}
 end;
 
 procedure TAria2ControlForm.FormShow(Sender: TObject);
