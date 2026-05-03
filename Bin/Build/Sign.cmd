@@ -1,4 +1,4 @@
-set SignCmd=g:\lite\cert\sign\signfile.cmd
+set SignCmd=f:\lite\cert\sign\signfile.cmd
 
 call %SignCmd% ..\Win32\AriaNg.exe
 call %SignCmd% ..\Win64\AriaNg.exe
